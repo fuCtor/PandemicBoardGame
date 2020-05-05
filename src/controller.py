@@ -4,10 +4,11 @@ import itertools as its
 import random
 import logging
 
-from .game import *
+from .game import Game, Player, GameCrisisException
 from .city import NoCityCubesException
 from .player import LastDiseaseCuredException
 from . import log
+from .ini_game_loader import IniGameLoader
 from .commands import COMMANDS
 from .api import HybridInputManager
 
@@ -31,12 +32,12 @@ class MainController:
         self.player_names = names = ['Alpha', 'Bravo', 'Charlie', 'Delta']
         self.players = players = {name: Player(name) for name in names}
 
-        game = self.game = Game()
+        game = self.game = Game(IniGameLoader())
 
         for name in self.player_names:
             game.add_player(players[name])
 
-        game.setup_game()
+        game.setup_game("data/default.cfg")
         game.start_game()
 
         try:
@@ -94,17 +95,17 @@ class MainController:
                     success = False
                 if not success:
                     logging.error(
-                        'Command cannot be executed. Type some other command.')
-                continue
+                        'Command cannot be executed. Type some other command.')                
 
-                logging.info(
+                logging.debug(
                     'Command successfully executed.')
+                continue
 
             logging.info(
                 'No actions left. Now getting cards...')
 
             # TODO: this must be a game method
-            for i in range(2):
+            for _ in range(2):
                 game.draw_card(player)
 
             logging.info(

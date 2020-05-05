@@ -44,12 +44,7 @@ class PlayerDeck(Deck):
     def prepare(self, settings):
         super().prepare(settings)
 
-        cities_section = settings['Cities']
-        city_colours_section = settings['City Colours']
-
-        for city_id in cities_section:
-            city_name = cities_section[city_id]
-            city_colour = city_colours_section[city_id]
+        for city_name, city_colour in settings.cities.items():            
             new_card = PlayerCard(city_name, city_colour)
             self.add_card(new_card)
 
@@ -80,12 +75,7 @@ class InfectDeck(Deck):
     def prepare(self, settings):
         super().prepare(settings)
 
-        cities_section = settings['Cities']
-        city_colours_section = settings['City Colours']
-
-        for city_id in cities_section:
-            city_name = cities_section[city_id]
-            city_colour = city_colours_section[city_id]
+        for city_name, city_colour in settings.cities.items():            
             new_card = InfectCard(city_name, city_colour)
             self.add_card(new_card)
 
@@ -98,4 +88,3 @@ class InfectDeck(Deck):
         self.discard = []
         logging.debug(
             f'Shuffled infect discard and placed on top of {self}.')
-

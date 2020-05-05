@@ -81,6 +81,6 @@ class City:
 
     # TODO: redesign this method
     @classmethod
-    def set_cube_colours(cls, settings):
-        cls.cube_colours = settings['Colours'].get('colours').split(',')
+    def set_cube_colours(cls, colors):
+        cls.cube_colours = colors
 

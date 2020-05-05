@@ -29,7 +29,8 @@ class DeathOutbreakLevelException(GameCrisisException):
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, game_loader):
+        self.game_loader = game_loader
         self.starting_epidemics = None
         self.outbreak_count = 0
         self.game_over = False
@@ -48,14 +49,16 @@ class Game:
         logging.debug(
             'Created new game.')
 
-    def setup_game(self, settings_location=None):
-        self.settings = config.get_settings(settings_location)
-        City.set_cube_colours(self.settings)
-        self.get_infection_rate()
-        self.get_new_cities()
-        self.get_new_decks()
-        self.get_new_diseases()
-        self.set_starting_epidemics()
+    def setup_game(self, settings_location=None):        
+        game_script = self.game_loader.load(settings_location)
+        self.settings = game_script
+
+        City.set_cube_colours(game_script.colors)
+        self.get_infection_rate(game_script)
+        self.get_new_cities(game_script)
+        self.get_new_decks(game_script)
+        self.get_new_diseases(game_script)
+        self.set_starting_epidemics(game_script)
 
         logging.info(
             'Game ready to begin.')
@@ -70,7 +73,7 @@ class Game:
         logging.info(
             'Game started.')
 
-        initial_city = self.settings['Other']['initial_city']
+        initial_city = self.settings.initial_city
         for player in self.players:
             player.set_location(initial_city)
         self.city_map[initial_city].has_lab = True
@@ -172,11 +175,11 @@ class Game:
         logging.info(
             'Starting initial infect phase.')
         cubes_to_add = 3
-        for i in range(3):
-            for j in range(3):
+        for _ in range(3):
+            for _ in range(3):
                 drawn_card = self.infect_deck.take_top_card()
                 self.infect_deck.add_discard(drawn_card)
-                for k in range(cubes_to_add):
+                for _ in range(cubes_to_add):
                     self.infect_city(drawn_card.name, drawn_card.colour)
             cubes_to_add -= 1
         logging.info(
@@ -187,7 +190,7 @@ class Game:
         logging.info(
             f'Starting infect phase ({self.infection_rate} cities to infect).')
 
-        for i in range(self.infection_rate):
+        for _ in range(self.infection_rate):
             drawn_card = self.infect_deck.take_top_card()
             self.infect_deck.add_discard(drawn_card)
             infected_city = self.city_map.get(drawn_card.name)
@@ -213,7 +216,7 @@ class Game:
         city_epidemic = self.city_map.get(drawn_card.name)
         logging.info(
             f'Starting epidemy in {city_epidemic}.')
-        for i in range(3):
+        for _ in range(3):
             self.infect_city(city_epidemic.name, city_epidemic.colour)
             if city_epidemic in self.outbreak_stack:
                 break
@@ -223,52 +226,41 @@ class Game:
         logging.info(
             'Epidemic phase finished.')
 
-    def set_starting_epidemics(self):
-        self.starting_epidemics = self.settings['Other'].getint('epidemics')
+    def set_starting_epidemics(self, settings):
+        self.starting_epidemics = settings.epidemics
         logging.debug(
             f'Set difficulty level to {self.starting_epidemics}.')
 
-    def get_new_cities(self):
-        cities_section = self.settings['Cities']
-        city_colours_section = self.settings['City Colours']
-
-        for city_id in cities_section:
-            city_name = cities_section[city_id]
-            city_colour = city_colours_section[city_id]
+    def get_new_cities(self, settings):
+        for city_name, city_colour in settings.cities.items():
             new_city = City(city_name, city_colour)
             self.city_map[city_name] = new_city
 
-        self.make_cities()
+        self.make_cities(settings)
         logging.debug(
             'Created city graph.')
 
-    def get_new_decks(self):
-        self.player_deck.prepare(self.settings)
-        self.infect_deck.prepare(self.settings)
+    def get_new_decks(self, settings):
+        self.player_deck.prepare(settings)
+        self.infect_deck.prepare(settings)
         logging.debug(
             'Decks prepared.')
 
-    def get_new_diseases(self):
-        diseases_section = self.settings['Diseases']
-        number_of_cubes = self.settings['Other'].getint('cubes')
+    def get_new_diseases(self, settings):
+        number_of_cubes = settings.cubes
 
-        for disease_id in diseases_section:
-            disease_colour = diseases_section[disease_id]
+        for disease_colour in settings.diseases:
             self.diseases[disease_colour] = Disease(disease_colour)
             self.disease_cubes[disease_colour] = number_of_cubes
 
-    def make_cities(self):
-        cities_section = self.settings['Cities']
-        connections = self.settings['Connections']
-
+    def make_cities(self, settings):
         for city_name, city in self.city_map.items():
-            city_connections = connections.get(city_name).split()
-            for id_ in city_connections:
-                added_city_name = cities_section.get('city' + id_)
+            city_connections = settings.connections.get(city_name.lower())
+            for added_city_name in city_connections:
                 city.add_connection(self.city_map[added_city_name])
 
-    def get_infection_rate(self):
-        self.infection_rates = self.settings['Other'].get('rate')
+    def get_infection_rate(self, settings):
+        self.infection_rates = settings.rate
         self.infection_rate = int(self.infection_rates[0])
 
     def set_lab_distances(self):
@@ -327,6 +319,6 @@ class Game:
             f'Draw initial player cards ({cards_to_draw} per player).')
 
         for player in self.players:
-            for i in range(cards_to_draw):
+            for _ in range(cards_to_draw):
                 self.draw_card(player)
 
